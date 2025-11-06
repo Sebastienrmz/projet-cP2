@@ -33,14 +33,11 @@ void adj_detruire(adj* g) {
 
 /* ========== listes ========== */
 void liste_ajouter_tete(liste* li, int dest, float p) {
-    li->head = cellule_creer(dest, p, li->head);  // insertion en tête (simple)
+    li->head = cellule_creer(dest, p, li->head);  // insertion en tête
 }
 
 /* ========== lecture fichier (format du sujet) ========== */
-/* Ligne 1 : N
- * Lignes suivantes : depart arrivee poids
- * (cf. diapo "Lecture des fichiers de données")                                         */
-adj* readGraph(const char* filename) {                                                /* :contentReference[oaicite:1]{index=1} */
+adj* readGraph(const char* filename) {
     FILE* f = fopen(filename, "rt");
     if (!f) { perror(filename); exit(EXIT_FAILURE); }
 
@@ -66,7 +63,6 @@ adj* readGraph(const char* filename) {                                          
 }
 
 /* ========== affichage ========== */
-/* Format d’affichage “liste d’adjacence” comme dans le cours                         */
 void adj_afficher(const adj* g) {
     if (!g) return;
     for (size_t i = 0; i < g->n; ++i) {
@@ -78,20 +74,89 @@ void adj_afficher(const adj* g) {
     }
 }
 
-/* ========== Étape 2 (optionnel) : vérification Markov ========== */
-/* somme des probabilités sortantes de chaque sommet ≈ 1 (tolérance simple)            */
+/* ========== Étape 2 : vérification Markov (UNE SEULE DÉFINITION) ========== */
 bool adj_verif_markov(const adj* g) {
     if (!g) return false;
-    const float MIN = 0.99f, MAX = 1.00f + 1e-6f;
+
+    const float MIN = 0.99f;
+    const float MAX = 1.00f + 1e-6f;   // petite tolérance numérique
     bool ok = true;
+
     for (size_t i = 0; i < g->n; ++i) {
-        float s = 0.0f;
-        for (cellule* c = g->L[i].head; c; c = c->next) s += c->poids;
-        if (s < MIN || s > MAX) {
-            printf("Sommet %zu invalide : somme = %.2f\n", i + 1, s);
+        float somme = 0.0f;
+        for (cellule* c = g->L[i].head; c; c = c->next) {
+            somme += c->poids;
+        }
+        if (somme < MIN || somme > MAX) {
+            printf("la somme des probabilites du sommet %zu est %.2f\n", i + 1, somme);
             ok = false;
         }
     }
-    if (ok) printf("Le graphe est un graphe de Markov.\n");
+
+    if (ok) {
+        printf("Le graphe est un graphe de Markov\n");
+    } else {
+        printf("Le graphe n'est pas un graphe de Markov\n");
+    }
     return ok;
+}
+
+/* ========== Étape 3 : utilitaire getId ========== */
+void getId(int num, char* buffer, size_t buflen) {
+    if (!buffer || buflen == 0) return;
+    if (num <= 0) { buffer[0] = '?'; buffer[1] = '\0'; return; }
+
+    char tmp[32];
+    int k = 0;
+    while (num > 0 && k < (int)sizeof(tmp) - 1) {
+        int r = (num - 1) % 26;
+        tmp[k++] = (char)('A' + r);
+        num = (num - 1) / 26;
+    }
+    tmp[k] = '\0';
+
+    int n = k;
+    for (int i = 0; i < n && (size_t)i < buflen - 1; ++i) {
+        buffer[i] = tmp[n - 1 - i];
+    }
+    buffer[(size_t)n < buflen ? n : buflen - 1] = '\0';
+}
+
+/* ========== Étape 3 : écriture Mermaid ========== */
+int adj_write_mermaid(const adj* g, const char* out_path) {
+    if (!g || !out_path) return 0;
+
+    FILE* f = fopen(out_path, "wt");
+    if (!f) { perror(out_path); return 0; }
+
+    fprintf(f,
+        "---\n"
+        "config:\n"
+        "  layout: elk\n"
+        "  theme: neo\n"
+        "  look: neo\n"
+        "---\n\n"
+        "flowchart LR\n");
+
+    // nœuds
+    for (size_t i = 0; i < g->n; ++i) {
+        char id[8];
+        getId((int)(i + 1), id, sizeof id);
+        fprintf(f, "%s((%zu))\n", id, i + 1);
+    }
+    fprintf(f, "\n");
+
+    // arêtes
+    for (size_t u = 0; u < g->n; ++u) {
+        char idu[8];
+        getId((int)(u + 1), idu, sizeof idu);
+        for (cellule* c = g->L[u].head; c; c = c->next) {
+            char idv[8];
+            getId(c->to, idv, sizeof idv);
+            fprintf(f, "%s -->|%.2f|%s\n", idu, c->poids, idv);
+        }
+    }
+
+    fclose(f);
+    return 1;
 }

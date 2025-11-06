@@ -10,11 +10,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-/* -------- structures du cours --------
- * cellule : une arête sortante (destination + poids + lien suivant)
- * liste   : liste simplement chaînée de cellules
- * adj     : tableau dynamique de listes (une par sommet)
- */
+
 
 typedef struct cellule {
     int to;                 // sommet d'arrivée
@@ -44,7 +40,14 @@ adj*   readGraph(const char* filename);
 /* ---- affichage ---- */
 void   adj_afficher(const adj* g);
 
-/* ---- Étape 2 (optionnel) : vérif Markov ---- */
+
 bool   adj_verif_markov(const adj* g);
+
+
+// --- Étape 3 : dessin Mermaid ---
+void getId(int num, char* buffer, size_t buflen);
+int  adj_write_mermaid(const adj* g, const char* out_path);
+
+
 
 #endif
