@@ -1,53 +1,61 @@
-
-#ifndef PROJET_CP2_GRAPH_H
-#define PROJET_CP2_GRAPH_H
-
-#endif //PROJET_CP2_GRAPH_H
-
-#ifndef TI301_GRAPH_H
-#define TI301_GRAPH_H
-
-#include <stddef.h>
-#include <stdbool.h>
-
-
-
 typedef struct cellule {
-    int to;                 // sommet d'arrivée
-    float poids;            // poids/probabilité (0 < p <= 1)
-    struct cellule* next;   // cellule suivante
-} cellule;
+    int arrivee;
+    float proba;
+    struct cellule *next;
+} cellule_t;
 
 typedef struct {
-    cellule* head;          // tête de liste (NULL si vide)
+    cellule_t *head;
 } liste;
 
 typedef struct {
-    size_t n;               // nombre de sommets
-    liste* L;               // L[i] = liste des arêtes sortantes du sommet i+1
-} adj;
-
-/* ---- création / destruction ---- */
-adj*   adj_creer(size_t n);
-void   adj_detruire(adj* g);
-
-/* ---- opérations sur les listes ---- */
-void   liste_ajouter_tete(liste* li, int dest, float p);
-
-/* ---- I/O (format du sujet) ---- */
-adj*   readGraph(const char* filename);
-
-/* ---- affichage ---- */
-void   adj_afficher(const adj* g);
+    liste *tab;
+    int taille;
+} liste_adjacence;
 
 
-bool   adj_verif_markov(const adj* g);
+#include <stdbool.h>
 
+typedef struct cellule {
+    int arrivee;
+    float proba;
+    struct cellule *next;
+} cellule_t;
 
-// --- Étape 3 : dessin Mermaid ---
-void getId(int num, char* buffer, size_t buflen);
-int  adj_write_mermaid(const adj* g, const char* out_path);
+typedef struct {
+    cellule_t *head;
+} liste;
 
+typedef struct {
+    liste *tab;
+    int taille;
+} liste_adjacence;
 
+typedef struct tarjan_vertex {
+    int identifiant;
+    int numero;
+    int accessible;
+    bool indicateur;
+} t_tarjan_vertex;
 
-#endif
+typedef struct sommet {
+    int identifiant;
+    struct sommet *next;
+} t_sommet;
+
+typedef struct class {
+    t_sommet *sommet;
+    struct class *next;
+} t_class;
+
+typedef struct {
+    t_tarjan_vertex *tab;
+    t_class *classes;
+    liste_adjacence *graph;
+} t_tarjan;
+
+typedef struct link {
+    int start;
+    int end;
+    struct link *next;
+} t_link;
