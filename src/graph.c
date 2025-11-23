@@ -1,13 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "include.h"
-//étape1
+#include <string.h>
+#include <math.h>
+#include <stdbool.h>
+#include "graph.h"
+
+/*
+ * PARTIE 1 - GRAPHE / LISTE D'ADJACENCE
+ */
+
+/* Création d'une cellule (arc) */
 cellule_t *create_cell(int arrivee, float proba)
 {
     cellule_t *cell = malloc(sizeof(cellule_t));
-
     if (cell == NULL) {
-        perror("Could not alocate cellule");
+        perror("Could not allocate cellule");
         exit(EXIT_FAILURE);
     }
     cell->arrivee = arrivee;
@@ -16,26 +23,26 @@ cellule_t *create_cell(int arrivee, float proba)
     return cell;
 }
 
-liste create_empty_list()
+/* Liste vide */
+liste create_empty_list(void)
 {
     liste empty;
-
     empty.head = NULL;
     return empty;
 }
 
+/* Ajout d'une cellule en tête de liste */
 void add_cell(liste *list, int arrivee, float proba)
 {
     cellule_t *cell = create_cell(arrivee, proba);
-
     cell->next = list->head;
     list->head = cell;
 }
 
+/* Affichage d'une liste d'adjacence pour debug */
 void display_list(liste *list)
 {
     cellule_t *tmp = list->head;
-
     while (tmp != NULL) {
         printf("(%d, %.2f) @-> ", tmp->arrivee, tmp->proba);
         tmp = tmp->next;
@@ -43,14 +50,14 @@ void display_list(liste *list)
     printf("NULL\n");
 }
 
+/* Création d'un tableau de listes d'adjacence vide */
 liste_adjacence create_empty_liste_adjacence(int nbvert)
 {
     liste_adjacence la;
-
     la.taille = nbvert;
     la.tab = malloc(sizeof(liste) * nbvert);
     if (la.tab == NULL) {
-        perror("Could not alocate tab");
+        perror("Could not allocate tab");
         exit(EXIT_FAILURE);
     }
     for (int i = 0; i < nbvert; i++) {
@@ -59,15 +66,22 @@ liste_adjacence create_empty_liste_adjacence(int nbvert)
     return la;
 }
 
+/* Affichage global du graphe (tableau de listes) */
 void display_liste_adjacence(liste_adjacence *la)
 {
     for (int i = 0; i < la->taille; i++) {
-        printf("Liste pour le somet %d: [head @] -> ", i + 1);
+        printf("Liste pour le sommet %d: [head @] -> ", i + 1);
         display_list(&la->tab[i]);
     }
 }
 
-liste_adjacence readGraph(const char *filename) {
+/* Lecture d'un graphe depuis un fichier texte
+ * Format:
+ *   nb_sommets
+ *   depart arrivee proba
+ */
+liste_adjacence readGraph(const char *filename)
+{
     FILE *file = fopen(filename, "rt");
     int nbvert, depart, arrivee;
     float proba;
@@ -78,94 +92,141 @@ liste_adjacence readGraph(const char *filename) {
         exit(EXIT_FAILURE);
     }
 
-    if (fscanf(file, "%d", &nbvert) != 1)
-    {
+    if (fscanf(file, "%d", &nbvert) != 1) {
         perror("Could not read number of vertices");
+        fclose(file);
         exit(EXIT_FAILURE);
     }
 
     la = create_empty_liste_adjacence(nbvert);
 
-    while (fscanf(file, "%d %d %f", &depart, &arrivee, &proba) == 3)
-    {
+    while (fscanf(file, "%d %d %f", &depart, &arrivee, &proba) == 3) {
         add_cell(&la.tab[depart - 1], arrivee, proba);
     }
 
     fclose(file);
     return la;
 }
-//étape2
-int valid_sommet(liste *list, int sommet) {
+
+/* Vérification de la propriété de Markov pour un sommet:
+ * somme des probabilités sortantes ≈ 1
+ */
+int valid_sommet(liste *list, int sommet)
+{
     cellule_t *tmp = list->head;
-    float somme = 0;
+    float somme = 0.0f;
 
     while (tmp != NULL) {
         somme += tmp->proba;
         tmp = tmp->next;
     }
-    if (somme > 1 || somme < 0.99) {
-        printf("la somme des probabilités du sommet %d est %.2f\n", sommet, somme);
+    if (somme > 1.01f || somme < 0.99f) {
+        printf("La somme des probabilites du sommet %d est %.2f\n", sommet, somme);
         return 0;
     }
     return 1;
 }
 
-void valid_graph(liste_adjacence *list) {
+/* Vérification globale de la propriété de Markov */
+void valid_graph(liste_adjacence *list)
+{
     int valid = 1;
-
     for (int i = 0; i < list->taille; i++) {
         if (!valid_sommet(&list->tab[i], i + 1))
             valid = 0;
     }
     if (!valid)
-        printf("Le graphe n'est pas un graphe de Markov\n");
+        printf("Le graphe n est pas un graphe de Markov\n");
     else
         printf("Le graphe est un graphe de Markov\n");
 }
-//étape3
 
+/* Conversion 1 -> A, 2 -> B, ..., 26 -> Z, 27 -> AA, etc. */
+char *getId(int num)
+{
+    static char buffer[10];
+    char temp[10];
+    int index = 0;
+
+    if (num <= 0) {
+        buffer[0] = '\0';
+        return buffer;
+    }
+
+    int n = num - 1; // passer en 0-based
+
+    while (n >= 0) {
+        temp[index++] = 'A' + (n % 26);
+        n = (n / 26) - 1;
+    }
+
+    // on a rempli temp à l’envers → on recopie à l'endroit
+    for (int i = 0; i < index; i++)
+        buffer[i] = temp[index - 1 - i];
+
+    buffer[index] = '\0';
+    return buffer;
+}
+
+/* Génération des arcs en Mermaid pour un sommet donné */
 void graph_cell(liste *list, int id, FILE *file)
 {
     cellule_t *tmp = list->head;
+    char from[10];
+    char to[10];
+
+    strcpy(from, getId(id));
 
     while (tmp != NULL) {
-        fprintf(file, "%s -->|%.2f|%s\n", getId(id), tmp->proba, getId(tmp->arrivee));
+        strcpy(to, getId(tmp->arrivee));
+        fprintf(file, "%s -->|%.2f| %s\n", from, tmp->proba, to);
         tmp = tmp->next;
     }
 }
 
-void draw_graph(liste_adjacence *list, char *filename) {
+/* Génération complète du fichier Mermaid du graphe */
+void draw_graph(liste_adjacence *list, char *filename)
+{
     FILE *file = fopen(filename, "w");
-
     if (file == NULL) {
-        perror("Could not open file for reading");
+        perror("Could not open file for writing");
         exit(EXIT_FAILURE);
     }
-    fprintf(file, "---\nconfig:\n layout: elk\n theme: neo\n look: neo\n---\n\nflowchart LR\n");
+
+    fprintf(file, "---\n");
+    fprintf(file, "config:\n");
+    fprintf(file, "  layout: elk\n");
+    fprintf(file, "  theme: neo\n");
+    fprintf(file, "  look: neo\n");
+    fprintf(file, "---\n\n");
+
+    fprintf(file, "flowchart LR\n");
+
+    // Déclaration des sommets
     for (int i = 0; i < list->taille; i++) {
         fprintf(file, "%s((%d))\n", getId(i + 1), i + 1);
     }
     fprintf(file, "\n");
+
+    // Déclaration des arcs
     for (int i = 0; i < list->taille; i++) {
         graph_cell(&list->tab[i], i + 1, file);
     }
+
     fclose(file);
+    printf("graph.mmd genere\n");
 }
 
-//####33333333####3333####33333333#333##
+/*
+ * PARTIE 2 - TARJAN / CLASSES / DIAGRAMME DE HASSE
+ */
 
-//Partie 2
-//étape 1
-#include <stdio.h>
-#include <stdlib.h>
-#include "include.h"
-
+/* Initialisation des sommets pour Tarjan */
 t_tarjan_vertex *transform_graph(liste_adjacence *list)
 {
     t_tarjan_vertex *vertex = malloc(sizeof(t_tarjan_vertex) * list->taille);
-
     if (vertex == NULL) {
-        perror("Could not alocate vertex");
+        perror("Could not allocate vertex");
         exit(EXIT_FAILURE);
     }
 
@@ -178,43 +239,43 @@ t_tarjan_vertex *transform_graph(liste_adjacence *list)
     return vertex;
 }
 
+/* Ajout d'une classe (liste chainée de sommets) */
 void add_class(t_class **head, t_sommet *list)
 {
     t_class *new = malloc(sizeof(t_class));
-
     if (new == NULL) {
         perror("Could not allocate class");
         exit(EXIT_FAILURE);
     }
-
     new->sommet = list;
     new->next = *head;
     *head = new;
 }
 
+/* Ajout d'un sommet dans une pile/list chainée */
 void add_sommet(t_sommet **head, int identifiant)
 {
     t_sommet *new = malloc(sizeof(t_sommet));
-
     if (new == NULL) {
-        perror("Could not alocate sommet");
+        perror("Could not allocate sommet");
         exit(EXIT_FAILURE);
     }
-
     new->identifiant = identifiant;
     new->next = *head;
     *head = new;
 }
 
+/* Retrait d'un sommet (utilisé comme pop de pile) */
 int delete_sommet(t_sommet **head)
 {
     t_sommet *tmp = *head;
     int identifiant = tmp->identifiant;
-
     *head = tmp->next;
+    free(tmp);
     return identifiant;
 }
 
+/* DFS de Tarjan */
 void parcours(int v, t_tarjan *tarjan, t_sommet **sommet, int *num)
 {
     cellule_t *tmp_cell = tarjan->graph->tab[v].head;
@@ -233,8 +294,7 @@ void parcours(int v, t_tarjan *tarjan, t_sommet **sommet, int *num)
             parcours(w, tarjan, sommet, num);
             if (tarjan->tab[v].accessible > tarjan->tab[w].accessible)
                 tarjan->tab[v].accessible = tarjan->tab[w].accessible;
-        }
-        else if (tarjan->tab[w].indicateur) {
+        } else if (tarjan->tab[w].indicateur) {
             if (tarjan->tab[v].accessible > tarjan->tab[w].numero)
                 tarjan->tab[v].accessible = tarjan->tab[w].numero;
         }
@@ -251,7 +311,9 @@ void parcours(int v, t_tarjan *tarjan, t_sommet **sommet, int *num)
     }
 }
 
-t_class *tarjan_function(liste_adjacence *graph) {
+/* Fonction principale Tarjan : renvoie la liste des classes fortement connexes */
+t_class *tarjan_function(liste_adjacence *graph)
+{
     int num = 0;
     t_tarjan tarjan;
     t_sommet *sommet = NULL;
@@ -266,9 +328,11 @@ t_class *tarjan_function(liste_adjacence *graph) {
         }
     }
 
+    free(tarjan.tab);
     return tarjan.classes;
 }
 
+/* Affichage des classes */
 void display_classes(t_class *classes)
 {
     t_class *tmp_class = classes;
@@ -293,8 +357,7 @@ void display_classes(t_class *classes)
     }
 }
 
-//étape 2
-
+/* Construction d'un tableau: sommet -> indice de classe */
 int *create_tab_class(liste_adjacence *graph, t_class *classes)
 {
     int *tab_class = malloc(sizeof(int) * graph->taille);
@@ -302,8 +365,8 @@ int *create_tab_class(liste_adjacence *graph, t_class *classes)
     t_sommet *tmp_sommet = NULL;
     int i = 0;
 
-    if (tab_class == NULL)  {
-        perror("Could not alocate tab_class");
+    if (tab_class == NULL) {
+        perror("Could not allocate tab_class");
         exit(EXIT_FAILURE);
     }
 
@@ -319,27 +382,28 @@ int *create_tab_class(liste_adjacence *graph, t_class *classes)
     return tab_class;
 }
 
+/* Ajout d'un lien entre classes (évite les doublons) */
 void add_link(t_link **link, int start, int end)
 {
-    t_link *new = NULL;
     t_link *tmp = *link;
-
     while (tmp != NULL) {
         if (tmp->start == start && tmp->end == end)
             return;
         tmp = tmp->next;
     }
-    new = malloc(sizeof(t_link));
-    if (new == NULL) {
-        perror("Could not alocate link");
+
+    t_link *new_link = malloc(sizeof(t_link));
+    if (new_link == NULL) {
+        perror("Could not allocate link");
         exit(EXIT_FAILURE);
     }
-    new->start = start;
-    new->end = end;
-    new->next = *link;
-    *link = new;
+    new_link->start = start;
+    new_link->end = end;
+    new_link->next = *link;
+    *link = new_link;
 }
 
+/* Construction des liens entre classes (diagramme de Hasse non réduit) */
 t_link *get_class_link(int *tab_class, liste_adjacence *graph)
 {
     t_link *link = NULL;
@@ -348,14 +412,18 @@ t_link *get_class_link(int *tab_class, liste_adjacence *graph)
     for (int i = 0; i < graph->taille; i++) {
         tmp = graph->tab[i].head;
         while (tmp != NULL) {
-            if (tab_class[i] != tab_class[tmp->arrivee - 1])
-                add_link(&link, tab_class[i], tab_class[tmp->arrivee - 1]);
+            int c_from = tab_class[i];
+            int c_to   = tab_class[tmp->arrivee - 1];
+            if (c_from != c_to) {
+                add_link(&link, c_from, c_to);
+            }
             tmp = tmp->next;
         }
     }
     return link;
 }
 
+/* Génération du label Mermaid pour une classe */
 void draw_label(t_class *cls, int index, FILE *file)
 {
     t_sommet *tmp = cls->sommet;
@@ -372,40 +440,44 @@ void draw_label(t_class *cls, int index, FILE *file)
     fprintf(file, "}\"];\n");
 }
 
+/* Génération du diagramme de Hasse (Mermaid) */
 void draw_classes_link(t_link *link, t_class *classes, char *filename)
 {
     FILE *file = fopen(filename, "w");
-    t_link *tmp_link = link;
-    t_class *tmp_class = classes;
-    int i = 1;
-
     if (file == NULL) {
-        perror("Could not open file for reading");
+        perror("Could not open file for writing");
         exit(EXIT_FAILURE);
     }
 
-    fprintf(file, "---\nconfig:\n layout: elk\n theme: neo\n look: neo\n---\n\ngraph TB\n");
+    fprintf(file, "---\n");
+    fprintf(file, "config:\n  layout: elk\n  theme: neo\n  look: neo\n");
+    fprintf(file, "---\n\ngraph TB\n");
+
+    t_class *tmp_class = classes;
+    int id = 1;
     while (tmp_class != NULL) {
-        draw_label(tmp_class, i, file);
+        draw_label(tmp_class, id, file);
         tmp_class = tmp_class->next;
-        i++;
+        id++;
     }
+
+    t_link *tmp_link = link;
     while (tmp_link != NULL) {
-        fprintf(file, " C%d --> C%d\n", tmp_link->start + 1, tmp_link->end + 1);
+        fprintf(file, "C%d --> C%d\n", tmp_link->start + 1, tmp_link->end + 1);
         tmp_link = tmp_link->next;
     }
 
     fclose(file);
+    printf("hasse.mmd genere\n");
 }
 
-//étape 3
+/* Fonctions d'information sur les classes */
 
-bool can_exist(int class, t_link *link)
+bool can_exist(int class_index, t_link *link)
 {
     t_link *tmp = link;
-
     while (tmp != NULL) {
-        if (tmp->start == class)
+        if (tmp->start == class_index)
             return true;
         tmp = tmp->next;
     }
@@ -414,16 +486,12 @@ bool can_exist(int class, t_link *link)
 
 bool is_lonely(t_sommet *list)
 {
-    if (list->next == NULL)
-        return true;
-    return false;
+    return (list->next == NULL);
 }
 
 bool is_irreductible(t_class *classes)
 {
-    if (classes->next == NULL)
-        return true;
-    return false;
+    return (classes != NULL && classes->next == NULL);
 }
 
 void display_sommet(t_sommet *sommet, bool and)
@@ -432,11 +500,12 @@ void display_sommet(t_sommet *sommet, bool and)
     int i = 0;
 
     while (tmp != NULL) {
-        if (i != 0 || (and && tmp->next == NULL))
+        if (i != 0 || (and && tmp->next == NULL)) {
             if (and && tmp->next == NULL)
                 printf(" et ");
             else
                 printf(", ");
+        }
         printf("%d", tmp->identifiant + 1);
         i++;
         tmp = tmp->next;
@@ -454,9 +523,9 @@ void display_information(t_class *classes, t_link *link)
             display_sommet(tmp_class->sommet, false);
             printf("} est transitoire - ");
             if (is_lonely(tmp_class->sommet))
-                printf("l'état %d est transitoire;\n", tmp_class->sommet->identifiant + 1);
+                printf("l etat %d est transitoire;\n", tmp_class->sommet->identifiant + 1);
             else {
-                printf("les états ");
+                printf("les etats ");
                 display_sommet(tmp_class->sommet, true);
                 printf(" sont transitoires;\n");
             }
@@ -464,9 +533,11 @@ void display_information(t_class *classes, t_link *link)
             display_sommet(tmp_class->sommet, false);
             printf("} est persistante - ");
             if (is_lonely(tmp_class->sommet))
-                printf("l'état %d est persistant - L'état %d est absorbant;\n", tmp_class->sommet->identifiant + 1, tmp_class->sommet->identifiant + 1);
+                printf("l etat %d est persistant - L etat %d est absorbant;\n",
+                       tmp_class->sommet->identifiant + 1,
+                       tmp_class->sommet->identifiant + 1);
             else {
-                printf("les états ");
+                printf("les etats ");
                 display_sommet(tmp_class->sommet, true);
                 printf(" sont persistants;\n");
             }
@@ -475,70 +546,60 @@ void display_information(t_class *classes, t_link *link)
         tmp_class = tmp_class->next;
     }
     if (is_irreductible(classes))
-        printf("Le graphe de Markov est irréductible.\n");
+        printf("Le graphe de Markov est irreductible.\n");
     else
-        printf("Le graphe de Markov n’est pas irréductible.\n");
+        printf("Le graphe de Markov n est pas irreductible.\n");
 }
 
+/*
+ * PARTIE 3 - MATRICES / SOUS-MATRICES / CONVERGENCE
+ */
 
-
-//###############333#######3#33333######333#3#33##
-
-//Partie 3
-//étape1
-
-#include "include.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-
+/* Matrice vide (row x column remplie de 0) */
 t_matrix create_empty_matrix(int row, int column)
 {
     t_matrix matrix;
-
     matrix.matrix = malloc(sizeof(double *) * row);
     if (matrix.matrix == NULL) {
-        perror("Could not alocate matrix");
+        perror("Could not allocate matrix");
         exit(EXIT_FAILURE);
     }
 
     for (int i = 0; i < row; i++) {
         matrix.matrix[i] = malloc(sizeof(double) * column);
-
         if (matrix.matrix[i] == NULL) {
-            perror("Could not alocate matrix row");
+            perror("Could not allocate matrix row");
             exit(EXIT_FAILURE);
         }
         for (int j = 0; j < column; j++)
-            matrix.matrix[i][j] = 0;
+            matrix.matrix[i][j] = 0.0;
     }
     matrix.row = row;
     matrix.column = column;
     return matrix;
 }
 
+/* Création de la matrice de transition à partir du graphe */
 t_matrix create_matrix(liste_adjacence *graph)
 {
     t_matrix matrix;
-
-    matrix.matrix = malloc(sizeof(double *) * graph->taille);
     cellule_t *tmp = NULL;
 
+    matrix.matrix = malloc(sizeof(double *) * graph->taille);
     if (matrix.matrix == NULL) {
-        perror("Could not alocate matrix");
+        perror("Could not allocate matrix");
         exit(EXIT_FAILURE);
     }
 
     for (int i = 0; i < graph->taille; i++) {
         tmp = graph->tab[i].head;
         matrix.matrix[i] = malloc(sizeof(double) * graph->taille);
-
         if (matrix.matrix[i] == NULL) {
-            perror("Could not alocate matrix row");
+            perror("Could not allocate matrix row");
             exit(EXIT_FAILURE);
         }
         for (int j = 0; j < graph->taille; j++)
-            matrix.matrix[i][j] = 0;
+            matrix.matrix[i][j] = 0.0;
         while (tmp != NULL) {
             matrix.matrix[i][tmp->arrivee - 1] = tmp->proba;
             tmp = tmp->next;
@@ -549,21 +610,20 @@ t_matrix create_matrix(liste_adjacence *graph)
     return matrix;
 }
 
+/* Copie d'une matrice */
 t_matrix copy_matrix(t_matrix *copy)
 {
     t_matrix matrix;
-
     matrix.matrix = malloc(sizeof(double *) * copy->row);
     if (matrix.matrix == NULL) {
-        perror("Could not alocate matrix");
+        perror("Could not allocate matrix");
         exit(EXIT_FAILURE);
     }
 
     for (int i = 0; i < copy->row; i++) {
         matrix.matrix[i] = malloc(sizeof(double) * copy->column);
-
         if (matrix.matrix[i] == NULL) {
-            perror("Could not alocate matrix row");
+            perror("Could not allocate matrix row");
             exit(EXIT_FAILURE);
         }
         for (int j = 0; j < copy->column; j++)
@@ -574,19 +634,19 @@ t_matrix copy_matrix(t_matrix *copy)
     return matrix;
 }
 
+/* Calcul d'une case (row,column) de first*second */
 float calcul_cell(t_matrix *first, t_matrix *second, int row, int column)
 {
-    float result = 0;
-
+    float result = 0.0f;
     for (int i = 0; i < first->column; i++)
-        result += first->matrix[row][i] * second->matrix[i][column];
+        result += (float)(first->matrix[row][i] * second->matrix[i][column]);
     return result;
 }
 
+/* Produit matriciel */
 t_matrix multiply_matrix(t_matrix *first, t_matrix *second)
 {
     t_matrix result;
-
     if (first->column != second->row) {
         perror("The number of columns of the first matrix does not correspond to the number of rows of the second matrix");
         exit(EXIT_FAILURE);
@@ -600,23 +660,41 @@ t_matrix multiply_matrix(t_matrix *first, t_matrix *second)
     return result;
 }
 
+/* Matrice des valeurs absolues des différences : |first - second| */
 t_matrix diff_matrix(t_matrix *first, t_matrix *second)
 {
     t_matrix result;
-
-    if (first->row != second->row && first->column != second->column) {
+    if (first->row != second->row || first->column != second->column) {
         perror("The number of columns or rows of the first matrix does not correspond to the number of columns or rows of the second matrix");
         exit(EXIT_FAILURE);
     }
     result = create_empty_matrix(first->row, first->column);
     for (int i = 0; i < first->row; i++) {
         for (int j = 0; j < first->column; j++) {
-            result.matrix[i][j] = fabsf(first->matrix[i][j] - second->matrix[i][j]);
+            result.matrix[i][j] = fabs(first->matrix[i][j] - second->matrix[i][j]);
         }
     }
     return result;
 }
 
+/* Norme scalaire diff(M,N) = somme des |m_ij - n_ij| */
+double norm_diff_matrix(t_matrix *first, t_matrix *second)
+{
+    if (first->row != second->row || first->column != second->column) {
+        perror("Matrix sizes do not match in norm_diff_matrix");
+        exit(EXIT_FAILURE);
+    }
+
+    double sum = 0.0;
+    for (int i = 0; i < first->row; i++) {
+        for (int j = 0; j < first->column; j++) {
+            sum += fabs(first->matrix[i][j] - second->matrix[i][j]);
+        }
+    }
+    return sum;
+}
+
+/* Affichage d'une matrice (pour debug) */
 void display_matrix(t_matrix *matrix)
 {
     for (int i = 0; i < matrix->row; i++) {
@@ -626,46 +704,11 @@ void display_matrix(t_matrix *matrix)
     }
 }
 
-
-//// exemple de main :
-/*
-int main() {
-    liste_adjacence la = readGraph("example1.txt");
-    t_matrix matrix = create_matrix(&la);
-    t_matrix result = copy_matrix(&matrix);
-    t_matrix initiate = create_empty_matrix(1, 5);
-
-    initiate.matrix[0][0] = 1;
-    display_matrix(&initiate);
-    printf("////////////////////////\n");
-    display_matrix(&matrix);
-    printf("////////////////////////\n");
-    display_matrix(&result);
-    printf("////////////////////////\n");
-    for (int i = 0; i < 2; i++) // Pour M puissance 3
-        result = multiply_matrix(&result, &matrix);
-    display_matrix(&result);
-    printf("////////////////////////\n");
-    result = multiply_matrix(&initiate, &result);
-    display_matrix(&result);
-    printf("////////////////////////\n");
-    return 0;
-}
-*/
-
-
-
-//étape2
-
-#include "include.h"
-#include <stdio.h>
-#include <stdlib.h>
-
+/* Longueur d'une liste de sommets */
 int len_sommet(t_sommet *sommet)
 {
     t_sommet *tmp = sommet;
     int i = 0;
-
     while (tmp != NULL) {
         i++;
         tmp = tmp->next;
@@ -673,6 +716,7 @@ int len_sommet(t_sommet *sommet)
     return i;
 }
 
+/* Sous-matrice associée à une composante (classe) */
 t_matrix subMatrix(t_matrix matrix, t_partition part)
 {
     int len = len_sommet(part.head);
@@ -686,7 +730,8 @@ t_matrix subMatrix(t_matrix matrix, t_partition part)
         j = 0;
         second = part.head;
         while (second != NULL) {
-            result.matrix[i][j] = matrix.matrix[first->identifiant][second->identifiant];
+            result.matrix[i][j] =
+                matrix.matrix[first->identifiant][second->identifiant];
             j++;
             second = second->next;
         }
@@ -696,27 +741,66 @@ t_matrix subMatrix(t_matrix matrix, t_partition part)
     return result;
 }
 
-//// exemple de main :
-/*
-int main() {
-    liste_adjacence la = readGraph("example1.txt");
-    t_matrix matrix = create_matrix(&la);
-    t_class *class = tarjan_function(&la);
-    t_matrix result;
-    t_partition part;
+/* Puissance de M jusqu'à convergence selon un epsilon */
+t_matrix power_until_convergence(t_matrix *M, double epsilon, int max_iter)
+{
+    t_matrix current = copy_matrix(M);
 
-    display_matrix(&matrix);
-    printf("////////////////////////\n");
-    display_classes(class);
-    printf("////////////////////////\n");
-    printf("////////////////////////\n");
-    while (class != NULL) {
-        part.head = class->sommet;
-        result = subMatrix(matrix, part);
-        display_matrix(&result);
-        printf("////////////////////////\n");
-        class = class->next;
+    for (int k = 0; k < max_iter; k++) {
+        t_matrix next = multiply_matrix(&current, M);
+        double diff = norm_diff_matrix(&next, &current);
+
+        // Libération de l'ancienne matrice
+        for (int i = 0; i < current.row; i++)
+            free(current.matrix[i]);
+        free(current.matrix);
+
+        current = next;
+
+        if (diff < epsilon)
+            break;
     }
-    return 0;
+    return current;
 }
-*/
+
+/* Calcul (approché) des distributions stationnaires pour chaque classe */
+void stationary_distribution_for_classes(liste_adjacence *graph, t_class *classes)
+{
+    if (classes == NULL)
+        return;
+
+    t_matrix M = create_matrix(graph);
+    t_class *cls = classes;
+    int index = 1;
+
+    while (cls != NULL) {
+        t_partition part;
+        part.head = cls->sommet;
+
+        t_matrix sub = subMatrix(M, part);
+        t_matrix limit = power_until_convergence(&sub, 0.0001, 1000);
+
+        printf("Distribution stationnaire approx pour la classe C%d :\n[ ", index);
+        for (int j = 0; j < limit.column; j++) {
+            printf("%.4f ", limit.matrix[0][j]);
+        }
+        printf("]\n\n");
+
+        // libération de sub et limit
+        for (int i = 0; i < sub.row; i++)
+            free(sub.matrix[i]);
+        free(sub.matrix);
+
+        for (int i = 0; i < limit.row; i++)
+            free(limit.matrix[i]);
+        free(limit.matrix);
+
+        cls = cls->next;
+        index++;
+    }
+
+    // libération de M
+    for (int i = 0; i < M.row; i++)
+        free(M.matrix[i]);
+    free(M.matrix);
+}
