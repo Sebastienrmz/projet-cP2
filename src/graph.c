@@ -579,6 +579,15 @@ t_matrix create_empty_matrix(int row, int column)
     return matrix;
 }
 
+/* Matrice identité de taille n x n */
+t_matrix identity_matrix(int n)
+{
+    t_matrix I = create_empty_matrix(n, n);
+    for (int i = 0; i < n; i++)
+        I.matrix[i][i] = 1.0;
+    return I;
+}
+
 /* Création de la matrice de transition à partir du graphe */
 t_matrix create_matrix(liste_adjacence *graph)
 {
@@ -658,6 +667,40 @@ t_matrix multiply_matrix(t_matrix *first, t_matrix *second)
         }
     }
     return result;
+}
+/* Puissance entière d'une matrice : M^n */
+t_matrix power_matrix(t_matrix *M, int n)
+{
+    if (n < 0) {
+        fprintf(stderr, "power_matrix: n must be >= 0\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Cas n = 0 : retourne l'identité */
+    if (n == 0) {
+        return identity_matrix(M->row);
+    }
+
+    /* Cas n = 1 : copie de M */
+    if (n == 1) {
+        return copy_matrix(M);
+    }
+
+    /* Cas n >= 2 : on part de M et on multiplie n-1 fois */
+    t_matrix result = copy_matrix(M);   // result = M
+
+    for (int k = 1; k < n; k++) {
+        t_matrix next = multiply_matrix(&result, M);
+
+        // libère l'ancienne matrice result
+        for (int i = 0; i < result.row; i++)
+            free(result.matrix[i]);
+        free(result.matrix);
+
+        result = next;                  // result = result * M
+    }
+
+    return result;  // contient M^n
 }
 
 /* Matrice des valeurs absolues des différences : |first - second| */

@@ -111,5 +111,7 @@ t_matrix diff_matrix(t_matrix *first, t_matrix *second);
 void display_matrix(t_matrix *matrix);
 int len_sommet(t_sommet *sommet);
 t_matrix subMatrix(t_matrix matrix, t_partition part);
+t_matrix identity_matrix(int n);
+t_matrix power_matrix(t_matrix *M, int n);
 
 #endif

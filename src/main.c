@@ -14,20 +14,24 @@ void menu()
     printf(" 7 - Afficher la matrice de transition M\n");
     printf(" 8 - Calculer M^3\n");
     printf(" 9 - Sous-matrices par classe\n");
+    printf("10 - Calculer M^n\n");
     printf(" 0 - Quitter\n");
     printf("\nChoix: ");
 }
 
 int main(int argc, char **argv)
 {
-    const char *graph_file = "../data/exemple1";
+    // fichier par defaut
+    const char *graph_file = "../data/proba";
 
+    // si on donne un fichier en argument
     if (argc >= 2)
         graph_file = argv[1];
 
     printf("\nProjet Markov\n");
     printf("Fichier charge : %s\n\n", graph_file);
 
+    // lecture du graphe
     liste_adjacence graph = readGraph(graph_file);
 
     int choix;
@@ -85,6 +89,11 @@ int main(int argc, char **argv)
                 printf("Matrice de transition M :\n");
                 M = create_matrix(&graph);
                 display_matrix(&M);
+
+                // free
+                for (int i = 0; i < M.row; i++)
+                    free(M.matrix[i]);
+                free(M.matrix);
                 break;
 
             case 8: {
@@ -93,12 +102,25 @@ int main(int argc, char **argv)
                 t_matrix M2 = multiply_matrix(&M, &M);
                 t_matrix M3 = multiply_matrix(&M2, &M);
                 display_matrix(&M3);
+
+                // free
+                for (int i = 0; i < M.row; i++)
+                    free(M.matrix[i]);
+                free(M.matrix);
+
+                for (int i = 0; i < M2.row; i++)
+                    free(M2.matrix[i]);
+                free(M2.matrix);
+
+                for (int i = 0; i < M3.row; i++)
+                    free(M3.matrix[i]);
+                free(M3.matrix);
                 break;
             }
 
             case 9: {
                 if (!classes) classes = tarjan_function(&graph);
-                printf("Sous-matrices :\n");
+                printf("Sous-matrices par classe:\n");
 
                 t_class *tmp = classes;
                 int i = 1;
@@ -112,9 +134,46 @@ int main(int argc, char **argv)
                     display_matrix(&sub);
                     printf("\n");
 
+                    // free sub
+                    for (int r = 0; r < sub.row; r++)
+                        free(sub.matrix[r]);
+                    free(sub.matrix);
+
+                    // free M
+                    for (int r = 0; r < M.row; r++)
+                        free(M.matrix[r]);
+                    free(M.matrix);
+
                     tmp = tmp->next;
                     i++;
                 }
+                break;
+            }
+
+            case 10: {   // <<< NOUVELLE OPTION M^n
+                int n;
+                printf("Entrez la puissance n : ");
+                scanf("%d", &n);
+
+                // construire la matrice M
+                M = create_matrix(&graph);
+
+                // calcul de M^n
+                t_matrix Mn = power_matrix(&M, n);
+
+                printf("\nMatrice M^%d :\n", n);
+                display_matrix(&Mn);
+                printf("\n");
+
+                // free
+                for (int i = 0; i < M.row; i++)
+                    free(M.matrix[i]);
+                free(M.matrix);
+
+                for (int i = 0; i < Mn.row; i++)
+                    free(Mn.matrix[i]);
+                free(Mn.matrix);
+
                 break;
             }
 
