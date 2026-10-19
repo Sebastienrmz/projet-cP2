@@ -13,7 +13,7 @@
  */
 
 /* Création d'une cellule (arc) */
-cellule_t *create_cell(int arrivee, float proba)
+cellule_t *create_cell(int arrivee, double proba)
 {
     cellule_t *cell = malloc(sizeof(cellule_t));
     if (cell == NULL) {
@@ -35,7 +35,7 @@ liste create_empty_list(void)
 }
 
 /* Ajout d'une cellule en tête de liste */
-void add_cell(liste *list, int arrivee, float proba)
+void add_cell(liste *list, int arrivee, double proba)
 {
     cellule_t *cell = create_cell(arrivee, proba);
     cell->next = list->head;
@@ -121,7 +121,7 @@ liste_adjacence readGraph(const char *filename)
         if (*end || from < 1 || from > count || to < 1 || to > count ||
             probability < 0 || probability > 1) goto invalid;
         /* Un arc de probabilite nulle ne cree pas d'accessibilite. */
-        if (probability > 0) add_cell(&graph.tab[from - 1], (int)to, (float)probability);
+        if (probability > 0) add_cell(&graph.tab[from - 1], (int)to, probability);
     }
     if (ferror(file)) goto invalid;
     fclose(file);
@@ -139,13 +139,13 @@ invalid:
 int valid_sommet(liste *list, int sommet)
 {
     cellule_t *tmp = list->head;
-    float somme = 0.0f;
+    double somme = 0.0;
 
     while (tmp != NULL) {
         somme += tmp->proba;
         tmp = tmp->next;
     }
-    if (somme > 1.01f || somme < 0.99f) {
+    if (somme > 1.01 || somme < 0.99) {
         printf("La somme des probabilites du sommet %d est %.2f\n", sommet, somme);
         return 0;
     }
@@ -153,7 +153,7 @@ int valid_sommet(liste *list, int sommet)
 }
 
 /* Vérification globale de la propriété de Markov */
-void valid_graph(liste_adjacence *list)
+int valid_graph(liste_adjacence *list)
 {
     int valid = 1;
     for (int i = 0; i < list->taille; i++) {
@@ -164,6 +164,7 @@ void valid_graph(liste_adjacence *list)
         printf("Le graphe n est pas un graphe de Markov\n");
     else
         printf("Le graphe est un graphe de Markov\n");
+    return valid;
 }
 
 /* Conversion 1 -> A, 2 -> B, ..., 26 -> Z, 27 -> AA, etc. */
@@ -238,8 +239,12 @@ void draw_graph(liste_adjacence *list, char *filename)
         graph_cell(&list->tab[i], i + 1, file);
     }
 
-    fclose(file);
-    printf("graph.mmd genere\n");
+    int write_error = ferror(file);
+    if (fclose(file) != 0 || write_error) {
+        fprintf(stderr, "Echec d'ecriture : %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+    printf("%s genere\n", filename);
 }
 
 /*
@@ -492,8 +497,12 @@ void draw_classes_link(t_link *link, t_class *classes, char *filename)
         tmp_link = tmp_link->next;
     }
 
-    fclose(file);
-    printf("hasse.mmd genere\n");
+    int write_error = ferror(file);
+    if (fclose(file) != 0 || write_error) {
+        fprintf(stderr, "Echec d'ecriture : %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+    printf("%s genere\n", filename);
 }
 
 /* Fonctions d'information sur les classes */

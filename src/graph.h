@@ -7,7 +7,7 @@
 /* cellule d'une liste d'adjacence, représente un arc avec son sommet d'arrivée et sa probabilité */
 typedef struct cellule {
     int arrivee;
-    float proba;
+    double proba;
     struct cellule *next;
 } cellule_t;
 
@@ -70,14 +70,14 @@ typedef struct {
 
 
 /* prototypes partie 1 */
-cellule_t *create_cell(int arrivee, float proba);
+cellule_t *create_cell(int arrivee, double proba);
 liste create_empty_list(void);
-void add_cell(liste *list, int arrivee, float proba);
+void add_cell(liste *list, int arrivee, double proba);
 void display_list(liste *list);
 liste_adjacence create_empty_liste_adjacence(int nbvert);
 void display_liste_adjacence(liste_adjacence *la);
 liste_adjacence readGraph(const char *filename);
-void valid_graph(liste_adjacence *list);
+int valid_graph(liste_adjacence *list);
 void graph_cell(liste *list, int id, FILE *file);
 void draw_graph(liste_adjacence *list, char *filename);
 

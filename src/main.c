@@ -104,6 +104,7 @@ int main(int argc, char **argv)
                 break;
 
             case 6:
+                if (!valid_graph(&graph)) break;
                 if (!classes) classes = tarjan_function(&graph);
                 if (!tab_class) tab_class = create_tab_class(&graph, classes);
                 if (!links) links = get_class_link(tab_class, &graph);
