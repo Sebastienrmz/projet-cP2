@@ -43,7 +43,6 @@ La première ligne indique le nombre de sommets. Chaque ligne suivante contient 
 - `src/graph.h` : structures et prototypes.
 - `src/graph.c` : listes d'adjacence, Tarjan, classes et calcul matriciel.
 - `data/` : graphes fournis avec le projet.
-- `testseb.c` : ancien fichier de travail vide, non compilé.
 
 Les options 3 et 5 écrivent `graph.mmd` et `hasse.mmd` dans le dossier courant. Ce sont des fichiers Mermaid à ouvrir avec un visualiseur compatible. Le second représente les liens entre classes : il ne réalise pas de réduction transitive complète du diagramme de Hasse.
 
