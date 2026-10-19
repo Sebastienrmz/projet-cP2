@@ -1,8 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <ctype.h>
 #include "graph.h"
+#include <string.h>
 
-void menu()
+static int lire_entier(int min, int max, int *value)
+{
+    char line[128], *end;
+    for (;;) {
+        if (!fgets(line, sizeof line, stdin)) return 0;
+        if (!strchr(line, '\n') && !feof(stdin)) {
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
+            puts("Saisie trop longue.");
+            continue;
+        }
+        errno = 0;
+        long n = strtol(line, &end, 10);
+        if (end != line && !errno) {
+            while (isspace((unsigned char)*end)) ++end;
+            if (!*end && n >= min && n <= max) { *value = (int)n; return 1; }
+        }
+        printf("Entrez un entier entre %d et %d : ", min, max);
+    }
+}
+
+
+
+static void menu(void)
 {
     printf("\nMenu :\n");
     printf(" 1 - Afficher la liste d'adjacence\n");
@@ -22,7 +48,7 @@ void menu()
 int main(int argc, char **argv)
 {
     // fichier par defaut
-    const char *graph_file = "../data/proba";
+    const char *graph_file = "data/proba";
 
     // si on donne un fichier en argument
     if (argc >= 2)
@@ -42,7 +68,7 @@ int main(int argc, char **argv)
 
     do {
         menu();
-        scanf("%d", &choix);
+        if (!lire_entier(0, 10, &choix)) break;
         printf("\n");
 
         switch (choix)
@@ -65,22 +91,22 @@ int main(int argc, char **argv)
 
             case 4:
                 printf("Calcul des classes (Tarjan) :\n");
-                classes = tarjan_function(&graph);
+                if (!classes) classes = tarjan_function(&graph);
                 display_classes(classes);
                 break;
 
             case 5:
                 if (!classes) classes = tarjan_function(&graph);
-                tab_class = create_tab_class(&graph, classes);
-                links = get_class_link(tab_class, &graph);
+                if (!tab_class) tab_class = create_tab_class(&graph, classes);
+                if (!links) links = get_class_link(tab_class, &graph);
                 draw_classes_link(links, classes, "hasse.mmd");
                 printf("Generation de hasse.mmd terminee\n");
                 break;
 
             case 6:
                 if (!classes) classes = tarjan_function(&graph);
-                if (!links)
-                    links = get_class_link(create_tab_class(&graph, classes), &graph);
+                if (!tab_class) tab_class = create_tab_class(&graph, classes);
+                if (!links) links = get_class_link(tab_class, &graph);
                 printf("Informations sur les classes :\n");
                 display_information(classes, links);
                 break;
@@ -153,7 +179,7 @@ int main(int argc, char **argv)
             case 10: {   // <<< NOUVELLE OPTION M^n
                 int n;
                 printf("Entrez la puissance n : ");
-                scanf("%d", &n);
+                if (!lire_entier(0, 1000, &n)) goto cleanup;
 
                 // construire la matrice M
                 M = create_matrix(&graph);
@@ -187,5 +213,10 @@ int main(int argc, char **argv)
 
     } while (choix != 0);
 
+cleanup:
+    free(tab_class);
+    free_links(links);
+    free_classes(classes);
+    free_graph(&graph);
     return 0;
 }

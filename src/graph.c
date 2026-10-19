@@ -3,6 +3,9 @@
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <limits.h>
+#include <ctype.h>
 #include "graph.h"
 
 /*
@@ -80,32 +83,54 @@ void display_liste_adjacence(liste_adjacence *la)
  *   nb_sommets
  *   depart arrivee proba
  */
+/* Les exemples du cours restent petits ; cette limite evite les allocations
+   enormes et une recursion Tarjan trop profonde. */
 liste_adjacence readGraph(const char *filename)
 {
-    FILE *file = fopen(filename, "rt");
-    int nbvert, depart, arrivee;
-    float proba;
-    liste_adjacence la;
-
-    if (file == NULL) {
-        perror("Could not open file for reading");
-        exit(EXIT_FAILURE);
+    FILE *file = fopen(filename, "r");
+    liste_adjacence graph = {NULL, 0};
+    char line[512], *cursor, *end;
+    long count;
+    int number = 1;
+    if (!file) { perror(filename); exit(EXIT_FAILURE); }
+    if (!fgets(line, sizeof line, file)) goto invalid;
+    errno = 0;
+    count = strtol(line, &end, 10);
+    if (end == line || errno || count < 1 || count > 1000) goto invalid;
+    while (isspace((unsigned char)*end)) ++end;
+    if (*end) goto invalid;
+    graph = create_empty_liste_adjacence((int)count);
+    while (fgets(line, sizeof line, file)) {
+        ++number;
+        if (!strchr(line, '\n') && !feof(file)) goto invalid;
+        cursor = line;
+        while (isspace((unsigned char)*cursor)) ++cursor;
+        if (!*cursor) continue;
+        errno = 0;
+        long from = strtol(cursor, &end, 10);
+        if (end == cursor || errno || !isspace((unsigned char)*end)) goto invalid;
+        cursor = end;
+        errno = 0;
+        long to = strtol(cursor, &end, 10);
+        if (end == cursor || errno || !isspace((unsigned char)*end)) goto invalid;
+        cursor = end;
+        errno = 0;
+        double probability = strtod(cursor, &end);
+        if (end == cursor || errno || !isfinite(probability)) goto invalid;
+        while (isspace((unsigned char)*end)) ++end;
+        if (*end || from < 1 || from > count || to < 1 || to > count ||
+            probability < 0 || probability > 1) goto invalid;
+        /* Un arc de probabilite nulle ne cree pas d'accessibilite. */
+        if (probability > 0) add_cell(&graph.tab[from - 1], (int)to, (float)probability);
     }
-
-    if (fscanf(file, "%d", &nbvert) != 1) {
-        perror("Could not read number of vertices");
-        fclose(file);
-        exit(EXIT_FAILURE);
-    }
-
-    la = create_empty_liste_adjacence(nbvert);
-
-    while (fscanf(file, "%d %d %f", &depart, &arrivee, &proba) == 3) {
-        add_cell(&la.tab[depart - 1], arrivee, proba);
-    }
-
+    if (ferror(file)) goto invalid;
     fclose(file);
-    return la;
+    return graph;
+invalid:
+    fprintf(stderr, "Fichier invalide : %s, ligne %d.\n", filename, number);
+    free_graph(&graph);
+    fclose(file);
+    exit(EXIT_FAILURE);
 }
 
 /* Vérification de la propriété de Markov pour un sommet:
@@ -142,7 +167,7 @@ void valid_graph(liste_adjacence *list)
 }
 
 /* Conversion 1 -> A, 2 -> B, ..., 26 -> Z, 27 -> AA, etc. */
-char *getId(int num)
+static char *getId(int num)
 {
     static char buffer[10];
     char temp[10];
@@ -500,7 +525,7 @@ void display_sommet(t_sommet *sommet, bool and)
     int i = 0;
 
     while (tmp != NULL) {
-        if (i != 0 || (and && tmp->next == NULL)) {
+        if (i != 0) {
             if (and && tmp->next == NULL)
                 printf(" et ");
             else
@@ -610,7 +635,7 @@ t_matrix create_matrix(liste_adjacence *graph)
         for (int j = 0; j < graph->taille; j++)
             matrix.matrix[i][j] = 0.0;
         while (tmp != NULL) {
-            matrix.matrix[i][tmp->arrivee - 1] = tmp->proba;
+            matrix.matrix[i][tmp->arrivee - 1] += tmp->proba;
             tmp = tmp->next;
         }
     }
@@ -644,11 +669,11 @@ t_matrix copy_matrix(t_matrix *copy)
 }
 
 /* Calcul d'une case (row,column) de first*second */
-float calcul_cell(t_matrix *first, t_matrix *second, int row, int column)
+double calcul_cell(t_matrix *first, t_matrix *second, int row, int column)
 {
-    float result = 0.0f;
+    double result = 0.0;
     for (int i = 0; i < first->column; i++)
-        result += (float)(first->matrix[row][i] * second->matrix[i][column]);
+        result += first->matrix[row][i] * second->matrix[i][column];
     return result;
 }
 
@@ -671,7 +696,7 @@ t_matrix multiply_matrix(t_matrix *first, t_matrix *second)
 /* Puissance entière d'une matrice : M^n */
 t_matrix power_matrix(t_matrix *M, int n)
 {
-    if (n < 0) {
+    if (n < 0 || M->row != M->column) {
         fprintf(stderr, "power_matrix: n must be >= 0\n");
         exit(EXIT_FAILURE);
     }
@@ -846,4 +871,38 @@ void stationary_distribution_for_classes(liste_adjacence *graph, t_class *classe
     for (int i = 0; i < M.row; i++)
         free(M.matrix[i]);
     free(M.matrix);
+}
+
+void free_graph(liste_adjacence *graph)
+{
+    for (int i = 0; i < graph->taille; ++i) {
+        cellule_t *cell = graph->tab[i].head;
+        while (cell) { cellule_t *next = cell->next; free(cell); cell = next; }
+    }
+    free(graph->tab);
+    graph->tab = NULL;
+    graph->taille = 0;
+}
+
+void free_classes(t_class *classes)
+{
+    while (classes) {
+        t_class *next = classes->next;
+        while (classes->sommet) delete_sommet(&classes->sommet);
+        free(classes);
+        classes = next;
+    }
+}
+
+void free_links(t_link *links)
+{
+    while (links) { t_link *next = links->next; free(links); links = next; }
+}
+
+void free_matrix(t_matrix *matrix)
+{
+    for (int i = 0; i < matrix->row; ++i) free(matrix->matrix[i]);
+    free(matrix->matrix);
+    matrix->matrix = NULL;
+    matrix->row = matrix->column = 0;
 }

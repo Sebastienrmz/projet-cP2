@@ -80,7 +80,6 @@ liste_adjacence readGraph(const char *filename);
 void valid_graph(liste_adjacence *list);
 void graph_cell(liste *list, int id, FILE *file);
 void draw_graph(liste_adjacence *list, char *filename);
-static char *getId(int num);
 
 /* prototypes partie 2 */
 t_tarjan_vertex *transform_graph(liste_adjacence *list);
@@ -105,7 +104,7 @@ void display_information(t_class *classes, t_link *link);
 t_matrix create_empty_matrix(int row, int column);
 t_matrix create_matrix(liste_adjacence *graph);
 t_matrix copy_matrix(t_matrix *copy);
-float calcul_cell(t_matrix *first, t_matrix *second, int row, int column);
+double calcul_cell(t_matrix *first, t_matrix *second, int row, int column);
 t_matrix multiply_matrix(t_matrix *first, t_matrix *second);
 t_matrix diff_matrix(t_matrix *first, t_matrix *second);
 void display_matrix(t_matrix *matrix);
@@ -113,5 +112,10 @@ int len_sommet(t_sommet *sommet);
 t_matrix subMatrix(t_matrix matrix, t_partition part);
 t_matrix identity_matrix(int n);
 t_matrix power_matrix(t_matrix *M, int n);
+
+void free_graph(liste_adjacence *graph);
+void free_classes(t_class *classes);
+void free_links(t_link *links);
+void free_matrix(t_matrix *matrix);
 
 #endif
