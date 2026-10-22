@@ -1,5 +1,13 @@
 # Graphes et chaînes de Markov en C
 
+## Essayer rapidement sous Windows
+
+**[Télécharger la version Windows](https://github.com/Sebastienrmz/projet-cP2/releases/latest)**
+
+Télécharger le fichier **Graphes-Markov-Windows.zip** dans la rubrique **Assets**, faire **Extraire tout**, puis double-cliquer sur **Tester.bat**. Le programme et ses ressources sont fournis ensemble : aucun chemin à configurer.
+
+Aucun compilateur nécessaire pour cette version. Les instructions ci-dessous permettent aussi de compiler les sources.
+
 Projet de cours sur les graphes probabilistes, les composantes fortement connexes et les matrices de transition.
 
 Le programme charge un graphe depuis un fichier texte. Le menu permet d'afficher sa liste d'adjacence, de vérifier les sommes des probabilités, de trouver les classes avec Tarjan et de calculer des puissances de la matrice de transition.

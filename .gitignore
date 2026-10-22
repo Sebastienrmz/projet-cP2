@@ -5,3 +5,6 @@
 *.o
 /graph.mmd
 /hasse.mmd
+
+/dist/
+*.spec

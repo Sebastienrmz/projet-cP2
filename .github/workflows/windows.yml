@@ -1,0 +1,47 @@
+name: Version Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'images/**'
+      - 'data/**'
+      - 'assets/**'
+      - 'main.py'
+      - 'requirements.txt'
+      - 'CMakeLists.txt'
+      - 'windows/**'
+      - 'tools/package_windows.py'
+      - '.github/workflows/windows.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: version-windows
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Construire le ZIP
+        run: python tools/package_windows.py --kind markov
+      - name: Verifier le programme et les ressources
+        run: python tools/check_windows.py
+      - name: Publier le telechargement
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "windows-${{ github.run_number }}"
+          gh release create $tag "dist/Graphes-Markov-Windows.zip" --target "$env:GITHUB_SHA" --title "Version Windows - $tag" --notes-file windows/NOTES.md --latest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

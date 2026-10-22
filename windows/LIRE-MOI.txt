@@ -1,0 +1,12 @@
+VERSION WINDOWS 64 BITS
+
+1. Extraire entierement le fichier ZIP (clic droit > Extraire tout).
+2. Ouvrir le dossier extrait.
+3. Double-cliquer sur Tester.bat.
+
+Choisir un graphe, puis essayer les options 1, 2, 4 et 7.
+Option 2 : verification de Markov ; option 4 : classes avec Tarjan.
+Option 0 : quitter. Les fichiers .mmd generes sont du texte Mermaid.
+
+Le code et les credits de l’equipe sont dans README.md et sur GitHub :
+https://github.com/Sebastienrmz/projet-cP2
