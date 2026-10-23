@@ -1,16 +1,16 @@
 # Graphes et chaînes de Markov en C
 
+Projet de cours sur les graphes probabilistes, les composantes fortement connexes et les matrices de transition.
+
+Le programme charge un graphe depuis un fichier texte. Le menu permet d'afficher sa liste d'adjacence, de vérifier les sommes des probabilités, de trouver les classes avec Tarjan et de calculer des puissances de la matrice de transition.
+
 ## Essayer rapidement sous Windows
 
 **[Télécharger la version Windows](https://github.com/Sebastienrmz/projet-cP2/releases/latest)**
 
-Télécharger le fichier **Graphes-Markov-Windows.zip** dans la rubrique **Assets**, faire **Extraire tout**, puis double-cliquer sur **Tester.bat**. Le programme et ses ressources sont fournis ensemble : aucun chemin à configurer.
+Télécharger le fichier **Graphes-Markov-Windows.zip** dans la rubrique **Assets**, faire **Extraire tout**, puis double-cliquer sur **Tester.bat**. Garder les ressources dans le dossier extrait.
 
-Aucun compilateur nécessaire pour cette version. Les instructions ci-dessous permettent aussi de compiler les sources.
-
-Projet de cours sur les graphes probabilistes, les composantes fortement connexes et les matrices de transition.
-
-Le programme charge un graphe depuis un fichier texte. Le menu permet d'afficher sa liste d'adjacence, de vérifier les sommes des probabilités, de trouver les classes avec Tarjan et de calculer des puissances de la matrice de transition.
+La compilation depuis les sources est décrite ci-dessous.
 
 ## Lancer le projet
 
@@ -27,7 +27,7 @@ Depuis la racine du dépôt :
 ./build/markov_graph data/proba
 ```
 
-Sous Windows : ` .\build\markov_graph.exe data/proba`.
+Sous Windows : `.\build\markov_graph.exe data/proba`.
 Avec Visual Studio, l'exécutable se trouve généralement dans `build/Debug/`.
 Dans CLion, choisir la racine du dépôt comme répertoire de travail.
 
@@ -54,7 +54,7 @@ La première ligne indique le nombre de sommets. Chaque ligne suivante contient 
 
 Les options 3 et 5 écrivent `graph.mmd` et `hasse.mmd` dans le dossier courant. Ce sont des fichiers Mermaid à ouvrir avec un visualiseur compatible. Le second représente les liens entre classes : il ne réalise pas de réduction transitive complète du diagramme de Hasse.
 
-## Points à connaître
+## Fonctionnement et limites
 
 Tarjan utilise un parcours en profondeur, une pile et les indices d'accessibilité pour regrouper les sommets qui communiquent. La matrice stocke les probabilités de passage d'un sommet à l'autre. Le calcul de `M^n` conserve les multiplications successives du projet initial ; `M^0` est l'identité.
 
